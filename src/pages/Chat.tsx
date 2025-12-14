@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import BottomNavigation from '../components/BottomNavigation'
 import UserListItem from '../components/UserListItem'
 import ComingSoon from '../components/ComingSoon'
@@ -101,6 +102,7 @@ const languageOptions = [
 function Chat() {
   const [activeTab, setActiveTab] = useState<Tab>('chat')
   const [language, setLanguage] = useState('english')
+  const navigate = useNavigate()
 
   const renderContent = () => {
     switch (activeTab) {
@@ -123,7 +125,7 @@ function Chat() {
                   key={user.id}
                   user={user}
                   onClick={() => {
-                    // Handle chat click - will be implemented later
+                    navigate(`/chat/${user.id}`)
                   }}
                 />
               ))}
