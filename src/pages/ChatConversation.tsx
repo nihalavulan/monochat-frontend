@@ -98,9 +98,17 @@ function ChatConversation() {
     return groups
   }, [messages])
 
+  const today = new Date().toISOString().split('T')[0]
+
   const sortedDates = useMemo(() => {
-    return Object.keys(groupedMessages).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+    return Object.keys(groupedMessages).sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
   }, [groupedMessages])
+
+  useEffect(() => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+    }, 100)
+  }, [])
 
   const handleSend = (text: string) => {
     const today = new Date().toISOString().split('T')[0]
@@ -175,7 +183,12 @@ function ChatConversation() {
 
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {sortedDates.map((date) => (
-            <DateHeader key={date} date={date} messageCount={groupedMessages[date].length}>
+            <DateHeader 
+              key={date} 
+              date={date} 
+              messageCount={groupedMessages[date].length}
+              initialCollapsed={date !== today}
+            >
               {groupedMessages[date].map((message) => (
                 <MessageBubble key={message.id} message={message} />
               ))}

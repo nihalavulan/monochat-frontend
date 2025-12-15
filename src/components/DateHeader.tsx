@@ -4,10 +4,11 @@ interface DateHeaderProps {
   date: string
   messageCount: number
   children: React.ReactNode
+  initialCollapsed?: boolean
 }
 
-function DateHeader({ date, messageCount, children }: DateHeaderProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false)
+function DateHeader({ date, messageCount, children, initialCollapsed = false }: DateHeaderProps) {
+  const [isCollapsed, setIsCollapsed] = useState(initialCollapsed)
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)

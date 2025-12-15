@@ -5,17 +5,35 @@ import Input from '../components/Input'
 import Select from '../components/Select'
 import Button from '../components/Button'
 import AuthLink from '../components/AuthLink'
+import { registerUser } from '../services/auth.api'
+import { ShowAlert } from '../utils/Alert'
 
 function Register() {
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [language, setLanguage] = useState('')
+  const [loading, setLoading] = useState(false)
+
+
+  const handleRegister = async (e: any) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      await registerUser({ username, password, email, preferredLanguage: language })
+      ShowAlert("success", "Signup successful. Please verify your email.")
+    } catch (error) {
+      console.log("Error on registering user", error);
+    } finally {
+      setLoading(false)
+    }
+  }
+
 
   return (
     <AuthLayout>
       <FormCard title="Create your account">
-        <form className="space-y-4">
+        <form className="space-y-4" onSubmit={(e) => handleRegister(e)}>
           <Input
             type="text"
             value={username}
@@ -47,7 +65,7 @@ function Register() {
             </Select>
             <p className="text-text-tertiary text-xs mt-2">This can be changed later</p>
           </div>
-          <Button type="submit">Create account</Button>
+          <Button type="submit">{loading ? 'Loading...' : 'Create account'}</Button>
         </form>
         <AuthLink text="Already have an account?" linkText="Login" to="/login" />
       </FormCard>
