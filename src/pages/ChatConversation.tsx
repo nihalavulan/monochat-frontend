@@ -140,7 +140,7 @@ function ChatConversation() {
       <div className="w-full max-w-md md:max-w-2xl lg:max-w-4xl mx-auto flex-1 flex flex-col overflow-hidden md:shadow-lg md:border-x md:border-border-primary relative z-10">
         <div className="bg-bg-panel border-b border-border-primary px-4 py-3 flex items-center gap-3 flex-shrink-0">
           <button
-            onClick={() => navigate('/chat')}
+            onClick={() => navigate('/chats')}
             className="flex-shrink-0"
           >
             <svg

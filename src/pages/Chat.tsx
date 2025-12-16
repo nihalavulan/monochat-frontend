@@ -125,7 +125,7 @@ function Chat() {
                   key={user.id}
                   user={user}
                   onClick={() => {
-                    navigate(`/chat/${user.id}`)
+                    navigate(`/chats/${user.id}`)
                   }}
                 />
               ))}

@@ -24,7 +24,7 @@ function Login() {
       const data = await loginUser({ username, password })
       setAuth(data.user, data.token)
       ShowAlert("success", "Login successful.")
-      navigate('/chat')
+      navigate('/chats')
     } catch (error) {
       console.log("Error on logging in user", error);
       handleApiError(error, "An error occurred during login. Please try again.")
