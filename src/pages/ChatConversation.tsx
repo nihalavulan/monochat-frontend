@@ -4,6 +4,10 @@ import Avatar from '../components/Avatar'
 import MessageBubble from '../components/MessageBubble'
 import ChatInput from '../components/ChatInput'
 import DateHeader from '../components/DateHeader'
+import { useAuthStore } from '../store/auth.store'
+import { useSocketStore } from '../store/socket.store'
+import { v4 as uuidv4 } from 'uuid';
+
 
 interface Message {
   id: string
@@ -14,53 +18,53 @@ interface Message {
   senderName?: string
 }
 
-const dummyMessages: Message[] = [
-  {
-    id: '1',
-    text: 'Hi, good to see you! We\'re starting work on a presentation for a new product today, right?',
-    timestamp: '8:36 PM',
-    date: new Date().toISOString().split('T')[0],
-    isMe: true
-  },
-  {
-    id: '2',
-    text: 'Yes, that\'s right. Let\'s discuss the main points and structure of the presentation',
-    timestamp: '8:38 PM',
-    date: new Date().toISOString().split('T')[0],
-    isMe: false,
-    senderName: 'Aysha Hayes'
-  },
-  {
-    id: '3',
-    text: 'Okay, then let\'s divide the presentation into a few main sections: introduction, product description, features and benefits, use cases, and conclusion.',
-    timestamp: '8:52 PM',
-    date: new Date().toISOString().split('T')[0],
-    isMe: false,
-    senderName: 'Aysha Hayes'
-  },
-  {
-    id: '4',
-    text: 'It\'s a deal',
-    timestamp: '8:53 PM',
-    date: new Date().toISOString().split('T')[0],
-    isMe: true
-  },
-  {
-    id: '5',
-    text: 'Good morning! How are you doing today?',
-    timestamp: '9:15 AM',
-    date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-    isMe: false,
-    senderName: 'Aysha Hayes'
-  },
-  {
-    id: '6',
-    text: 'I\'m doing great, thanks for asking!',
-    timestamp: '9:20 AM',
-    date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-    isMe: true
-  }
-]
+// const dummyMessages: Message[] = [
+//   {
+//     id: '1',
+//     text: 'Hi, good to see you! We\'re starting work on a presentation for a new product today, right?',
+//     timestamp: '8:36 PM',
+//     date: new Date().toISOString().split('T')[0],
+//     isMe: true
+//   },
+//   {
+//     id: '2',
+//     text: 'Yes, that\'s right. Let\'s discuss the main points and structure of the presentation',
+//     timestamp: '8:38 PM',
+//     date: new Date().toISOString().split('T')[0],
+//     isMe: false,
+//     senderName: 'Aysha Hayes'
+//   },
+//   {
+//     id: '3',
+//     text: 'Okay, then let\'s divide the presentation into a few main sections: introduction, product description, features and benefits, use cases, and conclusion.',
+//     timestamp: '8:52 PM',
+//     date: new Date().toISOString().split('T')[0],
+//     isMe: false,
+//     senderName: 'Aysha Hayes'
+//   },
+//   {
+//     id: '4',
+//     text: 'It\'s a deal',
+//     timestamp: '8:53 PM',
+//     date: new Date().toISOString().split('T')[0],
+//     isMe: true
+//   },
+//   {
+//     id: '5',
+//     text: 'Good morning! How are you doing today?',
+//     timestamp: '9:15 AM',
+//     date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+//     isMe: false,
+//     senderName: 'Aysha Hayes'
+//   },
+//   {
+//     id: '6',
+//     text: 'I\'m doing great, thanks for asking!',
+//     timestamp: '9:20 AM',
+//     date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+//     isMe: true
+//   }
+// ]
 
 const dummyUsers: Record<string, { name: string; online: boolean }> = {
   '1': { name: 'Aysha Hayes', online: true },
@@ -76,9 +80,19 @@ const dummyUsers: Record<string, { name: string; online: boolean }> = {
 }
 
 function ChatConversation() {
+
+  const socket = useSocketStore(state => state.socket)
+  const currentUser = useAuthStore(state => state.user)
+
+  const toUserId = currentUser?.id == "693ef531b4e9bd489e3ba006" ? "693f010599bf864295fa740d" : "693ef531b4e9bd489e3ba006";
+const currentUserId = currentUser?.id;
+
+
   const { id } = useParams<{ id: string }>()
+
+
   const navigate = useNavigate()
-  const [messages, setMessages] = useState<Message[]>(dummyMessages)
+  const [messages, setMessages] = useState<Message[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const user = id ? dummyUsers[id] : null
@@ -86,6 +100,50 @@ function ChatConversation() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+
+  useEffect(() => {
+
+    if(!socket || !currentUserId || !toUserId) return;
+
+    const handleReceive = (payload: {
+      fromUserId: string
+      text: string
+      createdAt: string
+    }) => {
+      if (
+        payload.fromUserId !== toUserId &&
+        payload.fromUserId !== currentUser.id
+      ) {
+        return
+      }
+
+            const date = payload.createdAt.split('T')[0]
+
+
+      setMessages(prev => [
+        ...prev,
+        {
+          id: uuidv4(),
+          text: payload.text,
+          timestamp: new Date(payload.createdAt).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+          }),
+          date,
+          isMe: payload.fromUserId === currentUser.id,
+          fromUserId: currentUser?.id == "693ef531b4e9bd489e3ba006" ? "693f010599bf864295fa740d" : "693ef531b4e9bd489e3ba006",
+          senderName: currentUser?.id == "693ef531b4e9bd489e3ba006" ? "Mubashir Vp" : "Nihal Avulan",
+        },
+      ])
+    }
+    socket.on('receive_message', handleReceive)
+
+    return () => {
+      socket.off('receive_message', handleReceive)
+    }
+  },[socket , currentUserId , toUserId])
 
   const groupedMessages = useMemo(() => {
     const groups: Record<string, Message[]> = {}
@@ -111,15 +169,22 @@ function ChatConversation() {
   }, [])
 
   const handleSend = (text: string) => {
-    const today = new Date().toISOString().split('T')[0]
-    const newMessage: Message = {
-      id: Date.now().toString(),
+    // const today = new Date().toISOString().split('T')[0]
+    // const newMessage: Message = {
+    //   id: Date.now().toString(),
+    //   text,
+    //   timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+    //   date: today,
+    //   isMe: true,
+    // }
+
+    if(!socket) return;
+
+    socket.emit('send_message', {
+      toUserId : currentUser?.id == "693ef531b4e9bd489e3ba006" ? "693f010599bf864295fa740d" : "693ef531b4e9bd489e3ba006",
       text,
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
-      date: today,
-      isMe: true
-    }
-    setMessages([...messages, newMessage])
+      createdAt: new Date().toISOString(),
+    })
   }
 
   if (!user) {

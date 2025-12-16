@@ -114,13 +114,15 @@ function Chat() {
 
 
   useEffect(() => {
-    if(!token) return;
+    if(!token) {
+      disconnectSocket();
+      return;
+    }
 
     connectSocket(token as string);
-
-    return () => {
-      disconnectSocket();
-    }
+    
+    // Only disconnect if token becomes null (user logged out)
+    // Don't disconnect on component unmount to keep socket alive during navigation
   },[token , connectSocket , disconnectSocket])
 
 
