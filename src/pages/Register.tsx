@@ -7,6 +7,9 @@ import Button from '../components/Button'
 import AuthLink from '../components/AuthLink'
 import { registerUser } from '../services/auth.api'
 import { ShowAlert } from '../utils/Alert'
+import { handleApiError } from '../utils/errorHandler'
+import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../store/auth.store'
 
 function Register() {
   const [username, setUsername] = useState('')
@@ -14,7 +17,7 @@ function Register() {
   const [password, setPassword] = useState('')
   const [language, setLanguage] = useState('')
   const [loading, setLoading] = useState(false)
-
+  const navigate = useNavigate()
 
   const handleRegister = async (e: any) => {
     e.preventDefault()
@@ -22,8 +25,10 @@ function Register() {
     try {
       await registerUser({ username, password, email, preferredLanguage: language })
       ShowAlert("success", "Signup successful. Please verify your email.")
+      navigate('/login')
     } catch (error) {
       console.log("Error on registering user", error);
+      handleApiError(error, "An error occurred during registration. Please try again.")
     } finally {
       setLoading(false)
     }

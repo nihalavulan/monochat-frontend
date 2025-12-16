@@ -6,11 +6,18 @@ interface registerPayload {
     email : String,
     preferredLanguage : String
 }
+interface loginPayload {
+    username : String,
+    password : String,
+}
+
 export const registerUser =async (payload : registerPayload) => {
-    try {
-        const res =await api.post('/auth/register' , payload)
-        return res.data
-    } catch (error) {
-        console.log("Error on backend : " , error)
-    }
+    const res = await api.post('/auth/register' , payload)
+    return res.data
+}
+
+
+export const loginUser =async (payload : loginPayload) => {
+    const res = await api.post('/auth/login' , payload)
+    return res.data
 }

@@ -54,3 +54,4 @@ function Avatar({ name, size = 'md', online = false }: AvatarProps) {
 export default Avatar
 
 
+
