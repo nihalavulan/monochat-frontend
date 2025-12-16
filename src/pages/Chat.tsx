@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import BottomNavigation from '../components/BottomNavigation'
 import UserListItem from '../components/UserListItem'
 import ComingSoon from '../components/ComingSoon'
+import Profile from '../components/Profile'
 import Dropdown from '../components/Dropdown'
 import { useSocketStore } from '../store/socket.store'
 import { useAuthStore } from '../store/auth.store'
@@ -153,8 +154,9 @@ function Chat() {
           </div>
         )
       case 'communities':
-      case 'profile':
         return <ComingSoon />
+      case 'profile':
+        return <Profile />
       default:
         return null
     }
