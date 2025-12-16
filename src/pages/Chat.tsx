@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BottomNavigation from '../components/BottomNavigation'
 import UserListItem from '../components/UserListItem'
 import ComingSoon from '../components/ComingSoon'
 import Dropdown from '../components/Dropdown'
+import { useSocketStore } from '../store/socket.store'
+import { useAuthStore } from '../store/auth.store'
 
 type Tab = 'chat' | 'communities' | 'profile'
 
@@ -104,6 +106,24 @@ function Chat() {
   const [language, setLanguage] = useState('english')
   const navigate = useNavigate()
 
+
+  const token = useAuthStore(state => state.token)
+  const connectSocket = useSocketStore(state => state.connect)
+  const disconnectSocket = useSocketStore(state => state.disconnect)
+
+
+  useEffect(() => {
+    if(!token) return;
+
+    connectSocket(token as string);
+
+    return () => {
+      disconnectSocket();
+    }
+  },[token , connectSocket , disconnectSocket])
+
+
+  
   const renderContent = () => {
     switch (activeTab) {
       case 'chat':
