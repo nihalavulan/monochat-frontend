@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BottomNavigation from '../components/BottomNavigation'
 import UserListItem from '../components/UserListItem'
 import ComingSoon from '../components/ComingSoon'
 import Profile from '../components/Profile'
 import Dropdown from '../components/Dropdown'
+import Input from '../components/Input'
 import { useSocketStore } from '../store/socket.store'
 import { useAuthStore } from '../store/auth.store'
+import { getUsersByUsername } from '../services/users.api'
 
 type Tab = 'chat' | 'communities' | 'profile'
 
@@ -19,82 +21,6 @@ interface User {
   online?: boolean
 }
 
-const dummyUsers: User[] = [
-  {
-    id: '1',
-    name: 'Aysha Hayes',
-    lastMessage: 'Hi, good to see you! We\'re starting work on a presentation...',
-    timestamp: '8:52 PM',
-    unreadCount: 12,
-    online: true
-  },
-  {
-    id: '2',
-    name: 'Katy Johnson',
-    lastMessage: 'Yes, that\'s right. Let\'s discuss the main points...',
-    timestamp: '8:38 PM',
-    online: true
-  },
-  {
-    id: '3',
-    name: 'Michael Chen',
-    lastMessage: 'Thanks for the update!',
-    timestamp: '7:15 PM',
-    online: false
-  },
-  {
-    id: '4',
-    name: 'Sarah Williams',
-    lastMessage: 'See you tomorrow!',
-    timestamp: '6:45 PM',
-    unreadCount: 3,
-    online: true
-  },
-  {
-    id: '5',
-    name: 'David Brown',
-    lastMessage: 'The meeting is scheduled for 3 PM',
-    timestamp: '5:30 PM',
-    online: false
-  },
-  {
-    id: '6',
-    name: 'Emily Davis',
-    lastMessage: 'Can we reschedule?',
-    timestamp: '4:20 PM',
-    online: true
-  },
-  {
-    id: '7',
-    name: 'James Wilson',
-    lastMessage: 'Great work on the project!',
-    timestamp: '3:10 PM',
-    online: false
-  },
-  {
-    id: '8',
-    name: 'Olivia Martinez',
-    lastMessage: 'Looking forward to it!',
-    timestamp: '2:00 PM',
-    unreadCount: 1,
-    online: true
-  },
-  {
-    id: '9',
-    name: 'Robert Taylor',
-    lastMessage: 'Let me know when you\'re ready',
-    timestamp: '1:30 PM',
-    online: false
-  },
-  {
-    id: '10',
-    name: 'Sophia Anderson',
-    lastMessage: 'Perfect! That works for me.',
-    timestamp: '12:15 PM',
-    online: true
-  }
-]
-
 const languageOptions = [
   { value: 'english', label: 'English' },
   { value: 'malayalam', label: 'Malayalam' },
@@ -105,6 +31,7 @@ const languageOptions = [
 function Chat() {
   const [activeTab, setActiveTab] = useState<Tab>('chat')
   const [language, setLanguage] = useState('english')
+  const [searchQuery, setSearchQuery] = useState('')
   const navigate = useNavigate()
 
 
@@ -125,6 +52,77 @@ function Chat() {
     // Don't disconnect on component unmount to keep socket alive during navigation
   },[token , connectSocket , disconnectSocket])
 
+  // Filter users based on search query
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([])
+  const debounceTimeoutRef = useRef<number | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
+
+  const searchUsers = useCallback(async (query: string) => {
+    // Cancel previous request if it exists
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+
+    // Create new abort controller for this request
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+
+    try {
+      const response = await getUsersByUsername({ username: query })
+      
+      // Only update state if the request wasn't aborted
+      if (!abortController.signal.aborted) {
+        // Map API response to User format expected by UserListItem
+        const mappedUsers: User[] = response.users.map((apiUser) => ({
+          id: apiUser._id,
+          name: apiUser.username,
+          // Optional fields can be added later if needed
+          // lastMessage, timestamp, unreadCount, online
+        }))
+        setFilteredUsers(mappedUsers)
+      }
+    } catch (error) {
+      // Ignore abort errors
+      if (error instanceof Error && error.name !== 'AbortError' && !abortController.signal.aborted) {
+        console.error(error)
+        setFilteredUsers([])
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    // Clear previous debounce timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current)
+    }
+
+    // Clear previous abort controller
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+
+    if (searchQuery.length > 0) {
+      // Debounce the search to avoid excessive API calls
+      debounceTimeoutRef.current = window.setTimeout(() => {
+        searchUsers(searchQuery)
+      }, 300) // 300ms debounce delay
+    } else {
+      // Schedule state update asynchronously to avoid synchronous setState in effect
+      debounceTimeoutRef.current = window.setTimeout(() => {
+        setFilteredUsers([])
+      }, 0)
+    }
+
+    // Cleanup function
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current)
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [searchQuery, searchUsers])
 
   
   const renderContent = () => {
@@ -133,7 +131,7 @@ function Chat() {
         return (
           <div className="flex-1 overflow-y-auto pb-20">
             <div className="sticky top-0 bg-bg-panel border-b border-border-primary px-4 md:px-6 py-4 md:py-5 z-10">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-4">
                 <h1 className="text-2xl md:text-3xl font-semibold text-text-primary">Chats</h1>
                 <Dropdown
                   value={language}
@@ -141,17 +139,36 @@ function Chat() {
                   options={languageOptions}
                 />
               </div>
+              <Input
+                type="text"
+                placeholder="Search users by username..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full"
+              />
             </div>
             <div className="divide-y divide-border-primary px-4 md:px-6">
-              {dummyUsers.map((user) => (
-                <UserListItem
-                  key={user.id}
-                  user={user}
-                  onClick={() => {
-                    navigate(`/chats/${user.id}`)
-                  }}
-                />
-              ))}
+              {searchQuery.length > 0 ? (
+                filteredUsers.length > 0 ? (
+                  filteredUsers.map((user) => (
+                    <UserListItem
+                      key={user.id}
+                      user={user}
+                      onClick={() => {
+                        navigate(`/chats/${user.id}`)
+                      }}
+                    />
+                  ))
+                ) : (
+                  <div className="py-8 text-center">
+                    <p className="text-text-tertiary">No users found matching "{searchQuery}"</p>
+                  </div>
+                )
+              ) : (
+                <div className="py-8 text-center">
+                  <p className="text-text-tertiary">Start typing to search for users</p>
+                </div>
+              )}
             </div>
           </div>
         )
