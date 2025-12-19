@@ -7,6 +7,7 @@ import DateHeader from '../components/DateHeader'
 import { useAuthStore } from '../store/auth.store'
 import { useSocketStore } from '../store/socket.store'
 import { v4 as uuidv4 } from 'uuid';
+import { getUserById } from '../services/users.api'
 
 
 interface Message {
@@ -18,75 +19,25 @@ interface Message {
   senderName?: string
 }
 
-// const dummyMessages: Message[] = [
-//   {
-//     id: '1',
-//     text: 'Hi, good to see you! We\'re starting work on a presentation for a new product today, right?',
-//     timestamp: '8:36 PM',
-//     date: new Date().toISOString().split('T')[0],
-//     isMe: true
-//   },
-//   {
-//     id: '2',
-//     text: 'Yes, that\'s right. Let\'s discuss the main points and structure of the presentation',
-//     timestamp: '8:38 PM',
-//     date: new Date().toISOString().split('T')[0],
-//     isMe: false,
-//     senderName: 'Aysha Hayes'
-//   },
-//   {
-//     id: '3',
-//     text: 'Okay, then let\'s divide the presentation into a few main sections: introduction, product description, features and benefits, use cases, and conclusion.',
-//     timestamp: '8:52 PM',
-//     date: new Date().toISOString().split('T')[0],
-//     isMe: false,
-//     senderName: 'Aysha Hayes'
-//   },
-//   {
-//     id: '4',
-//     text: 'It\'s a deal',
-//     timestamp: '8:53 PM',
-//     date: new Date().toISOString().split('T')[0],
-//     isMe: true
-//   },
-//   {
-//     id: '5',
-//     text: 'Good morning! How are you doing today?',
-//     timestamp: '9:15 AM',
-//     date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-//     isMe: false,
-//     senderName: 'Aysha Hayes'
-//   },
-//   {
-//     id: '6',
-//     text: 'I\'m doing great, thanks for asking!',
-//     timestamp: '9:20 AM',
-//     date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-//     isMe: true
-//   }
-// ]
-
-const dummyUsers: Record<string, { name: string; online: boolean }> = {
-  '1': { name: 'Aysha Hayes', online: true },
-  '2': { name: 'Katy Johnson', online: true },
-  '3': { name: 'Michael Chen', online: false },
-  '4': { name: 'Sarah Williams', online: true },
-  '5': { name: 'David Brown', online: false },
-  '6': { name: 'Emily Davis', online: true },
-  '7': { name: 'James Wilson', online: false },
-  '8': { name: 'Olivia Martinez', online: true },
-  '9': { name: 'Robert Taylor', online: false },
-  '10': { name: 'Sophia Anderson', online: true }
+interface User {
+  _id : string,
+username : string,
+email : string,
+preferredLanguage : string,
+isVerified : boolean,
+createdAt : string,
+updatedAt : string
 }
+
 
 function ChatConversation() {
 
   const socket = useSocketStore(state => state.socket)
   const currentUser = useAuthStore(state => state.user)
 
-  const toUserId = currentUser?.id == "693ef531b4e9bd489e3ba006" ? "693f010599bf864295fa740d" : "693ef531b4e9bd489e3ba006";
-const currentUserId = currentUser?.id;
-
+  const [user, setUser] = useState<User | null>(null)
+  const currentUserId = currentUser?.id;
+  const toUserId = user?._id;
 
   const { id } = useParams<{ id: string }>()
 
@@ -95,16 +46,21 @@ const currentUserId = currentUser?.id;
   const [messages, setMessages] = useState<Message[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const user = id ? dummyUsers[id] : null
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  useEffect(() => {
+    if(!id) return;
+    getUserById(id).then((user) => {
+      setUser(user)
+    })
+  }, [id])
 
   useEffect(() => {
 
-    if(!socket || !currentUserId || !toUserId) return;
+    if(!socket || !currentUserId || !user) return;
 
     const handleReceive = (payload: {
       fromUserId: string
@@ -112,7 +68,7 @@ const currentUserId = currentUser?.id;
       createdAt: string
     }) => {
       if (
-        payload.fromUserId !== toUserId &&
+        payload.fromUserId !== user._id &&
         payload.fromUserId !== currentUser.id
       ) {
         return
@@ -133,8 +89,8 @@ const currentUserId = currentUser?.id;
           }),
           date,
           isMe: payload.fromUserId === currentUser.id,
-          fromUserId: currentUser?.id == "693ef531b4e9bd489e3ba006" ? "693f010599bf864295fa740d" : "693ef531b4e9bd489e3ba006",
-          senderName: currentUser?.id == "693ef531b4e9bd489e3ba006" ? "Mubashir Vp" : "Nihal Avulan",
+          fromUserId: currentUser?.id == user?._id,
+          senderName: user?.username,
         },
       ])
     }
@@ -195,6 +151,9 @@ const currentUserId = currentUser?.id;
     )
   }
 
+  console.log("user", user);
+  
+
   return (
     <div className="h-screen flex flex-col bg-bg-primary safe-area-inset-top overflow-hidden relative">
       <div className="absolute inset-0 pointer-events-none">
@@ -222,11 +181,11 @@ const currentUserId = currentUser?.id;
               />
             </svg>
           </button>
-          <Avatar name={user.name} size="md" online={user.online} />
+          <Avatar name={user.username} size="md" online={false} />
           <div className="flex-1 min-w-0">
-            <h2 className="text-text-primary font-medium truncate">{user.name}</h2>
+            <h2 className="text-text-primary font-medium truncate">{user.username}</h2>
             <p className="text-text-tertiary text-xs">
-              {user.online ? 'Online' : 'Offline'}
+              {'Verified'}
             </p>
           </div>
           <button className="flex-shrink-0">

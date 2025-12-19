@@ -8,13 +8,20 @@ import Dropdown from '../components/Dropdown'
 import Input from '../components/Input'
 import { useSocketStore } from '../store/socket.store'
 import { useAuthStore } from '../store/auth.store'
-import { getUsersByUsername } from '../services/users.api'
+import { getUserById, getUsersByUsername } from '../services/users.api'
+import type { ApiUser } from '../services/users.api'
 
 type Tab = 'chat' | 'communities' | 'profile'
 
 interface User {
   id: string
   name: string
+  username?: string
+  email?: string
+  preferredLanguage?: string
+  isVerified?: boolean
+  createdAt?: string
+  updatedAt?: string
   lastMessage?: string
   timestamp?: string
   unreadCount?: number
@@ -54,6 +61,7 @@ function Chat() {
 
   // Filter users based on search query
   const [filteredUsers, setFilteredUsers] = useState<User[]>([])
+  const [isSearching, setIsSearching] = useState(false)
   const debounceTimeoutRef = useRef<number | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -67,25 +75,62 @@ function Chat() {
     const abortController = new AbortController()
     abortControllerRef.current = abortController
 
+    setIsSearching(true)
+
     try {
       const response = await getUsersByUsername({ username: query })
+      console.log('Search response:', response)
       
       // Only update state if the request wasn't aborted
       if (!abortController.signal.aborted) {
+        // Handle different response formats
+        let usersArray: ApiUser[] = []
+        
+        if (response && response.users && Array.isArray(response.users)) {
+          // Response has users property (expected format)
+          usersArray = response.users
+        } else if (Array.isArray(response)) {
+          // Response is directly an array
+          usersArray = response
+        } else {
+          // Check if response might have a different structure
+          const responseWithUser = response as { user?: ApiUser }
+          if (responseWithUser && responseWithUser.user) {
+            // Response has single user object, wrap in array
+            usersArray = [responseWithUser.user]
+          } else {
+            console.warn('Invalid response format:', response)
+            setFilteredUsers([])
+            setIsSearching(false)
+            return
+          }
+        }
+
         // Map API response to User format expected by UserListItem
-        const mappedUsers: User[] = response.users.map((apiUser) => ({
+        const mappedUsers: User[] = usersArray.map((apiUser) => ({
           id: apiUser._id,
           name: apiUser.username,
-          // Optional fields can be added later if needed
-          // lastMessage, timestamp, unreadCount, online
+          username: apiUser.username,
+          email: apiUser.email,
+          preferredLanguage: apiUser.preferredLanguage,
+          isVerified: apiUser.isVerified,
+          createdAt: apiUser.createdAt,
+          updatedAt: apiUser.updatedAt,
         }))
+        console.log('Mapped users:', mappedUsers)
         setFilteredUsers(mappedUsers)
+        setIsSearching(false)
+      } else {
+        setIsSearching(false)
       }
     } catch (error) {
       // Ignore abort errors
       if (error instanceof Error && error.name !== 'AbortError' && !abortController.signal.aborted) {
-        console.error(error)
+        console.error('Search error:', error)
         setFilteredUsers([])
+        setIsSearching(false)
+      } else {
+        setIsSearching(false)
       }
     }
   }, [])
@@ -107,8 +152,9 @@ function Chat() {
         searchUsers(searchQuery)
       }, 300) // 300ms debounce delay
     } else {
-      // Schedule state update asynchronously to avoid synchronous setState in effect
+      // Clear results when search is empty
       debounceTimeoutRef.current = window.setTimeout(() => {
+        setIsSearching(false)
         setFilteredUsers([])
       }, 0)
     }
@@ -124,7 +170,18 @@ function Chat() {
     }
   }, [searchQuery, searchUsers])
 
+  const handleUserClick = useCallback(async (userId: string) => {
+    try {
+      await getUserById(userId)
+      navigate(`/chats/${userId}`)
+    } catch (error) {
+      console.error('Failed to fetch user details:', error)
+      navigate(`/chats/${userId}`)
+    }
+  }, [navigate])
+
   
+
   const renderContent = () => {
     switch (activeTab) {
       case 'chat':
@@ -149,14 +206,16 @@ function Chat() {
             </div>
             <div className="divide-y divide-border-primary px-4 md:px-6">
               {searchQuery.length > 0 ? (
-                filteredUsers.length > 0 ? (
+                isSearching ? (
+                  <div className="py-8 text-center">
+                    <p className="text-text-tertiary">Searching...</p>
+                  </div>
+                ) : filteredUsers.length > 0 ? (
                   filteredUsers.map((user) => (
                     <UserListItem
                       key={user.id}
                       user={user}
-                      onClick={() => {
-                        navigate(`/chats/${user.id}`)
-                      }}
+                      onClick={() => handleUserClick(user.id)}
                     />
                   ))
                 ) : (

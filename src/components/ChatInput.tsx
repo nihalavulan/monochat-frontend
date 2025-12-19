@@ -33,7 +33,7 @@ function ChatInput({ onSend }: ChatInputProps) {
   }, [message])
 
   return (
-    <div className="bg-bg-panel border-t border-border-primary px-4 py-3 safe-area-inset-bottom">
+    <div className="bg-bg-panel border-t border-border-primary px-4 py-3 safe-area-inset-bottom flex-shrink-0">
       <div className="flex items-center gap-3">
         <div className="flex-1 relative">
           <textarea
