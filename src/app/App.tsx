@@ -5,6 +5,7 @@ import Chat from '../pages/Chat'
 import ChatConversation from '../pages/ChatConversation'
 import { ToastContainer, Slide } from 'react-toastify'
 import { useAuthStore } from '../store/auth.store'
+import ServerGate from '../components/ServerGate'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore()
@@ -18,28 +19,30 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-        <Route path="/chats" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
-        <Route path="/chats/:id" element={<ProtectedRoute><ChatConversation /></ProtectedRoute>} />
-        <Route path="*" element={<Navigate to="/chats" replace />} />
-      </Routes>
-      <ToastContainer
-        position="top-center"
-        autoClose={2000}
-        hideProgressBar
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="colored"
-        transition={Slide}
-      />
-    </BrowserRouter>
+    <ServerGate>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/chats" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+          <Route path="/chats/:id" element={<ProtectedRoute><ChatConversation /></ProtectedRoute>} />
+          <Route path="*" element={<Navigate to="/chats" replace />} />
+        </Routes>
+        <ToastContainer
+          position="top-center"
+          autoClose={2000}
+          hideProgressBar
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="colored"
+          transition={Slide}
+        />
+      </BrowserRouter>
+    </ServerGate>
   )
 }
 
