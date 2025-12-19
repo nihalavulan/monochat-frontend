@@ -9,7 +9,7 @@ import { registerUser } from '../services/auth.api'
 import { ShowAlert } from '../utils/Alert'
 import { handleApiError } from '../utils/errorHandler'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../store/auth.store'
+
 
 function Register() {
   const [username, setUsername] = useState('')
